@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZineImposter™</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --main: #004282;
+            --back: #ebebeb;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Source Code Pro", 'Courier New', Courier, monospace;
+            letter-spacing: 0.082em;
+            background: var(--back);
+            color: var(--main);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--back);
+        }
+        
+        .header {
+            background: var(--main);
+            color: var(--back);
+            padding: 2em;
+            text-align: center;
+            margin-bottom: 2em;
+        }
+        
+        .header h1 {
+            font-size: clamp(1rem, 4vw, 4rem);
+            font-weight: 600;
+            letter-spacing: 0.082em;
+        }
+        
+        .header p {
+            font-weight: 200;
+            margin-top: 0.5em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .section {
+            background: var(--back);
+            padding: 2em;
+            margin-bottom: 2em;
+            border: 0.082em dashed var(--main);
+        }
+        
+        .section h2 {
+            color: var(--main);
+            margin-bottom: 1em;
+            font-size: clamp(1rem, 2vw, 2rem);
+            font-weight: 400;
+        }
+        
+        .upload-area {
+            border: 0.082em dashed var(--main);
+            padding: 2em;
+            text-align: center;
+            background: var(--back);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 1em;
+        }
+        
+        .upload-area:hover {
+            transform: scale(1.02);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: var(--main);
+            color: var(--back);
+            border: none;
+            padding: 1em;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 400;
+            margin: 0.5em;
+            font-family: "Source Code Pro", monospace;
+            letter-spacing: 0.082em;
+            transition: transform 0.3s ease;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: scale(1.1);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-export {
+            font-size: 1.1rem;
+            padding: 1em 2em;
+        }
+        
+        .pages-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .page-slot {
+            aspect-ratio: 1/1.414;
+            border: 0.082em solid var(--main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--back);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .page-slot:hover {
+            transform: scale(1.05);
+        }
+        
+        .page-slot.filled {
+            border-width: 0.164em;
+        }
+        
+        .page-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .page-number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: var(--main);
+            color: var(--back);
+            padding: 0.25em 0.5em;
+            font-size: 0.8rem;
+            font-weight: 400;
+            z-index: 10;
+        }
+        
+        .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--main);
+            color: var(--back);
+            border: none;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .page-slot:hover .remove-btn {
+            opacity: 1;
+        }
+        
+        .progress {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            background: var(--back);
+            border: 0.082em solid var(--main);
+            height: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: var(--main);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .info-box {
+            background: var(--back);
+            border: 0.082em dashed var(--main);
+            padding: 1em;
+            margin-bottom: 1em;
+            font-weight: 200;
+        }
+        
+        .preview-section {
+            grid-column: span 2;
+            margin-top: 20px;
+        }
+        
+        .imposition-container {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .sheet-preview {
+            text-align: center;
+        }
+        
+        .sheet-preview h4 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .sheet-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            grid-template-rows: repeat(2, 100px);
+            gap: 4px;
+            padding: 1em;
+            background: var(--back);
+            border: 0.082em dashed var(--main);
+        }
+        
+        .mini-page {
+            background: var(--back);
+            border: 0.082em solid var(--main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--main);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mini-page.upside-down {
+            background: var(--main);
+            color: var(--back);
+            transform: rotate(180deg);
+        }
+        
+        .mini-page img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .imposition-container {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📖 Zine Maker</h1>
+            <!-- <p>Create zines 16 pages with automatic imposition</p> -->
+        </div>
+        
+        <div class="main-content">
+            <div class="section">
+                <h2>📁 Add Images</h2>
+                
+                <div class="info-box">
+                    <strong>16-Page Zine from single piece of paper</strong><br>
+                    Upload images for your zine. Select multiple files at once!
+                </div>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📷</div>
+                    <p><strong>Click or drag images here</strong></p>
+                    <p>Multiple images • PDF (16 pages) • JPG, PNG</p>
+                    <input type="file" class="file-input" id="fileInput" multiple accept="image/*,application/pdf">
+                </div>
+                
+                <div class="progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <p id="progressText">0 / 16 pages filled</p>
+                </div>
+                
+                <button class="btn" onclick="clearAll()">🗑️ Clear All</button>
+                <button class="btn btn-export" onclick="exportPDF()" id="exportBtn" disabled>📄 Export PDF</button>
+            </div>
+            
+            <div class="section">
+                <h2>📄 Page Order (1-16)</h2>
+                <p style="margin-bottom: 15px; color: #666;">Click any page to change its image</p>
+                
+                <div class="pages-grid" id="pagesGrid"></div>
+            </div>
+        </div>
+        
+        <div class="section preview-section">
+            <h2>🔄 Print Layout Preview</h2>
+            <p style="margin-bottom: 20px;">This shows how pages will be arranged on A3 paper. Pink boxes are upside-down.</p>
+            
+            <div class="imposition-container">
+                <div class="sheet-preview">
+                    <h4>Front Side</h4>
+                    <div class="sheet-grid" id="frontGrid"></div>
+                </div>
+                
+                <div class="sheet-preview">
+                    <h4>Back Side</h4>
+                    <div class="sheet-grid" id="backGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pages = new Array(16).fill(null);
+        
+        // Correct imposition with backside upside down
+        const frontLayout = [9, 8, 5, 12, 16, 1, 4, 13];
+        const backLayout = [11, 6, 7, 10, 14, 3, 2, 15];
+        const frontRotations = [180, 180, 180, 180, 0, 0, 0, 0];
+        const backRotations = [180, 180, 180, 180, 0, 0, 0, 0];
+        
+        function init() {
+            createPageSlots();
+            createImpositionPreview();
+            setupEventListeners();
+        }
+        
+        function createPageSlots() {
+            const grid = document.getElementById('pagesGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < 16; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'page-slot';
+                slot.innerHTML = `
+                    <div class="page-number">${i + 1}</div>
+                    <div style="color: #ccc; font-size: 2rem;">📄</div>
+                    <button class="remove-btn" onclick="removePage(${i})">×</button>
+                `;
+                slot.onclick = () => selectImage(i);
+                grid.appendChild(slot);
+            }
+        }
+        
+        function createImpositionPreview() {
+            const frontGrid = document.getElementById('frontGrid');
+            const backGrid = document.getElementById('backGrid');
+            
+            frontGrid.innerHTML = '';
+            frontLayout.forEach((pageNum, index) => {
+                const miniPage = document.createElement('div');
+                miniPage.className = 'mini-page';
+                miniPage.id = `front-${index}`;
+                miniPage.textContent = pageNum;
+                if (frontRotations[index] === 180) {
+                    miniPage.classList.add('upside-down');
+                }
+                frontGrid.appendChild(miniPage);
+            });
+            
+            backGrid.innerHTML = '';
+            backLayout.forEach((pageNum, index) => {
+                const miniPage = document.createElement('div');
+                miniPage.className = 'mini-page';
+                miniPage.id = `back-${index}`;
+                miniPage.textContent = pageNum;
+                if (backRotations[index] === 180) {
+                    miniPage.classList.add('upside-down');
+                }
+                backGrid.appendChild(miniPage);
+            });
+        }
+        
+        function setupEventListeners() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            uploadArea.onclick = () => fileInput.click();
+            
+            uploadArea.ondragover = (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            };
+            
+            uploadArea.ondragleave = () => {
+                uploadArea.classList.remove('dragover');
+            };
+            
+            uploadArea.ondrop = (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            };
+            
+            fileInput.onchange = (e) => {
+                handleFiles(e.target.files);
+            };
+        }
+        
+        function handleFiles(files) {
+            const filesArray = Array.from(files);
+            
+            // Check for PDF first
+            const pdfFile = filesArray.find(f => f.type === 'application/pdf');
+            if (pdfFile) {
+                loadPDFPages(pdfFile);
+                return;
+            }
+            
+            // Handle regular images
+            let nextSlot = 0;
+            filesArray.forEach((file) => {
+                if (file.type.startsWith('image/')) {
+                    while (nextSlot < 16 && pages[nextSlot] !== null) {
+                        nextSlot++;
+                    }
+                    if (nextSlot < 16) {
+                        loadImage(file, nextSlot);
+                        nextSlot++;
+                    }
+                }
+            });
+        }
+        
+        function loadPDFPages(file) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const loadingTask = pdfjsLib.getDocument({data: e.target.result});
+                    const pdf = await loadingTask.promise;
+                    const numPages = Math.min(pdf.numPages, 16);
+                    
+                    for (let i = 1; i <= numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const scale = 2;
+                        const viewport = page.getViewport({scale: scale});
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+                        
+                        const imageData = canvas.toDataURL('image/jpeg', 0.85);
+                        
+                        pages[i - 1] = {
+                            src: imageData,
+                            name: `${file.name} - Page ${i}`
+                        };
+                        
+                        updatePageSlot(i - 1);
+                    }
+                    
+                    updateProgress();
+                    updateImpositionPreview();
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                    alert('Error loading PDF. Please try again.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function loadImage(file, pageIndex) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                pages[pageIndex] = {
+                    src: e.target.result,
+                    name: file.name
+                };
+                updatePageSlot(pageIndex);
+                updateProgress();
+                updateImpositionPreview();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function selectImage(pageIndex) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                if (e.target.files[0]) {
+                    loadImage(e.target.files[0], pageIndex);
+                }
+            };
+            input.click();
+        }
+        
+        function updatePageSlot(pageIndex) {
+            const slots = document.querySelectorAll('.page-slot');
+            const slot = slots[pageIndex];
+            
+            if (pages[pageIndex]) {
+                slot.innerHTML = `
+                    <div class="page-number">${pageIndex + 1}</div>
+                    <img src="${pages[pageIndex].src}" alt="Page ${pageIndex + 1}">
+                    <button class="remove-btn" onclick="removePage(${pageIndex})">×</button>
+                `;
+                slot.classList.add('filled');
+            } else {
+                slot.innerHTML = `
+                    <div class="page-number">${pageIndex + 1}</div>
+                    <div style="color: #ccc; font-size: 2rem;">📄</div>
+                    <button class="remove-btn" onclick="removePage(${pageIndex})">×</button>
+                `;
+                slot.classList.remove('filled');
+            }
+            
+            slot.onclick = () => selectImage(pageIndex);
+        }
+        
+        function removePage(pageIndex) {
+            pages[pageIndex] = null;
+            updatePageSlot(pageIndex);
+            updateProgress();
+            updateImpositionPreview();
+        }
+        
+        function clearAll() {
+            for (let i = 0; i < 16; i++) {
+                pages[i] = null;
+                updatePageSlot(i);
+            }
+            updateProgress();
+            updateImpositionPreview();
+        }
+        
+        function updateProgress() {
+            const filledPages = pages.filter(page => page !== null).length;
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const exportBtn = document.getElementById('exportBtn');
+            
+            const percentage = (filledPages / 16) * 100;
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${filledPages} / 16 pages filled`;
+            
+            exportBtn.disabled = filledPages === 0;
+        }
+        
+        function updateImpositionPreview() {
+            frontLayout.forEach((pageNum, index) => {
+                const miniPage = document.getElementById(`front-${index}`);
+                if (pages[pageNum - 1] && pages[pageNum - 1].src) {
+                    miniPage.innerHTML = `<img src="${pages[pageNum - 1].src}" alt="Page ${pageNum}">`;
+                } else {
+                    miniPage.innerHTML = pageNum;
+                }
+            });
+            
+            backLayout.forEach((pageNum, index) => {
+                const miniPage = document.getElementById(`back-${index}`);
+                if (pages[pageNum - 1] && pages[pageNum - 1].src) {
+                    miniPage.innerHTML = `<img src="${pages[pageNum - 1].src}" alt="Page ${pageNum}">`;
+                } else {
+                    miniPage.innerHTML = pageNum;
+                }
+            });
+        }
+        
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a3'
+            });
+            
+            const slotWidth = 105;
+            const slotHeight = 148.5;
+            
+            addImpositionPage(pdf, frontLayout, frontRotations, slotWidth, slotHeight);
+            
+            pdf.addPage();
+            addImpositionPage(pdf, backLayout, backRotations, slotWidth, slotHeight);
+            
+            pdf.save('a5-zine-imposition.pdf');
+        }
+        
+        function addImpositionPage(pdf, layout, rotations, slotWidth, slotHeight) {
+            const cols = 4;
+            
+            layout.forEach((pageNum, index) => {
+                const row = Math.floor(index / cols);
+                const col = index % cols;
+                const x = col * slotWidth;
+                const y = row * slotHeight;
+                
+                if (pages[pageNum - 1] && pages[pageNum - 1].src) {
+                    try {
+                        const img = pages[pageNum - 1].src;
+                        
+                        if (rotations[index] === 180) {
+                            const rotated = rotateImage(img);
+                            pdf.addImage(rotated, 'JPEG', x, y, slotWidth, slotHeight);
+                        } else {
+                            pdf.addImage(img, 'JPEG', x, y, slotWidth, slotHeight);
+                        }
+                    } catch (error) {
+                        console.error('Error adding image:', error);
+                    }
+                }
+            });
+        }
+        
+        function rotateImage(imageSrc) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.src = imageSrc;
+            
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(Math.PI);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            
+            return canvas.toDataURL('image/jpeg', 0.85);
+        }
+        
+        // Set PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        init();
+    </script>
+</body>
+</html>
