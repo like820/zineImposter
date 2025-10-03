@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZineImposter™</title>
+    <title>Zine Maker - A5 from A3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -139,8 +139,17 @@
             background: var(--back);
             position: relative;
             overflow: hidden;
-            cursor: pointer;
+            cursor: move;
             transition: all 0.3s ease;
+        }
+        
+        .page-slot.dragging {
+            opacity: 0.5;
+        }
+        
+        .page-slot.drag-over {
+            border-width: 0.164em;
+            border-style: dashed;
         }
         
         .page-slot:hover {
@@ -155,6 +164,11 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center;
+        }
+        
+        .page-slot.fit-center img {
+            object-fit: contain;
         }
         
         .page-number {
@@ -268,6 +282,48 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center;
+        }
+        
+        .mini-page.fit-center img {
+            object-fit: contain;
+        }
+        
+        .btn-small {
+            padding: 0.5em 1em;
+            font-size: 0.9rem;
+        }
+        
+        .btn-small.active {
+            background: var(--back);
+            color: var(--main);
+            border: 0.082em solid var(--main);
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: var(--main);
+            outline: none;
+            margin: 1em 0;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--main);
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--main);
+            cursor: pointer;
+            border: none;
         }
         
         @media (max-width: 768px) {
@@ -285,17 +341,17 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📖 zineImposter</h1>
-            <p>making zines is easy!</p>
+            <h1>📖 Zine Maker</h1>
+            <p>Create A5 zines from A3 paper - 16 pages with automatic imposition</p>
         </div>
         
         <div class="main-content">
             <div class="section">
-                <h2>📁 add Images</h2>
+                <h2>📁 Add Images</h2>
                 
                 <div class="info-box">
-                    <strong>zine from single piece of paper</strong><br>
-                    upload 16 images for your zine
+                    <strong>16-Page A5 Zine from A3 Paper</strong><br>
+                    Upload images for your zine. Select multiple files at once!
                 </div>
                 
                 <div class="upload-area" id="uploadArea">
@@ -314,6 +370,18 @@
                 
                 <button class="btn" onclick="clearAll()">🗑️ Clear All</button>
                 <button class="btn btn-export" onclick="exportPDF()" id="exportBtn" disabled>📄 Export PDF</button>
+                
+                <div class="controls" style="margin-top: 2em; padding: 1em; border: 0.082em dashed var(--main);">
+                    <h3 style="margin-bottom: 1em; font-weight: 400;">Image Fit Options</h3>
+                    <div style="display: flex; gap: 0.5em; flex-wrap: wrap; margin-bottom: 1em;">
+                        <button class="btn btn-small" onclick="setFitMode('cover')" id="btn-cover">Fill Frame</button>
+                        <button class="btn btn-small" onclick="setFitMode('center')" id="btn-center">With Margin</button>
+                    </div>
+                    <div id="marginControl" style="display: none;">
+                        <label>Margin: <span id="marginValue">10</span>%</label>
+                        <input type="range" id="marginSlider" min="0" max="30" value="10" style="width: 100%;">
+                    </div>
+                </div>
             </div>
             
             <div class="section">
@@ -344,6 +412,8 @@
 
     <script>
         const pages = new Array(16).fill(null);
+        let fitMode = 'cover'; // 'cover', 'contain', 'center'
+        let marginPercent = 10;
         
         // Correct imposition with backside upside down
         const frontLayout = [9, 8, 5, 12, 16, 1, 4, 13];
@@ -355,6 +425,16 @@
             createPageSlots();
             createImpositionPreview();
             setupEventListeners();
+            setFitMode('cover'); // Set default
+            
+            // Margin slider
+            const marginSlider = document.getElementById('marginSlider');
+            const marginValue = document.getElementById('marginValue');
+            marginSlider.oninput = function() {
+                marginPercent = this.value;
+                marginValue.textContent = this.value;
+                updateAllPreviews();
+            };
         }
         
         function createPageSlots() {
@@ -364,11 +444,21 @@
             for (let i = 0; i < 16; i++) {
                 const slot = document.createElement('div');
                 slot.className = 'page-slot';
+                slot.draggable = true;
+                slot.dataset.index = i;
                 slot.innerHTML = `
                     <div class="page-number">${i + 1}</div>
                     <div style="color: #ccc; font-size: 2rem;">📄</div>
                     <button class="remove-btn" onclick="removePage(${i})">×</button>
                 `;
+                
+                // Drag and drop events
+                slot.ondragstart = handleDragStart;
+                slot.ondragover = handleDragOver;
+                slot.ondrop = handleDrop;
+                slot.ondragend = handleDragEnd;
+                slot.ondragleave = handleDragLeave;
+                
                 slot.onclick = () => selectImage(i);
                 grid.appendChild(slot);
             }
@@ -464,7 +554,7 @@
                     
                     for (let i = 1; i <= numPages; i++) {
                         const page = await pdf.getPage(i);
-                        const scale = 2;
+                        const scale = 1.5; // Reduced from 2 for smaller file size
                         const viewport = page.getViewport({scale: scale});
                         
                         const canvas = document.createElement('canvas');
@@ -477,7 +567,8 @@
                             viewport: viewport
                         }).promise;
                         
-                        const imageData = canvas.toDataURL('image/jpeg', 0.85);
+                        // Optimize with lower quality for smaller file
+                        const imageData = canvas.toDataURL('image/jpeg', 0.7);
                         
                         pages[i - 1] = {
                             src: imageData,
@@ -500,15 +591,47 @@
         function loadImage(file, pageIndex) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                pages[pageIndex] = {
-                    src: e.target.result,
-                    name: file.name
-                };
-                updatePageSlot(pageIndex);
-                updateProgress();
-                updateImpositionPreview();
+                // Optimize image before storing
+                optimizeImage(e.target.result, (optimizedSrc) => {
+                    pages[pageIndex] = {
+                        src: optimizedSrc,
+                        name: file.name
+                    };
+                    updatePageSlot(pageIndex);
+                    updateProgress();
+                    updateImpositionPreview();
+                });
             };
             reader.readAsDataURL(file);
+        }
+        
+        function optimizeImage(src, callback) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Calculate optimal size (max 1500px on longest side)
+                const maxSize = 1500;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > height && width > maxSize) {
+                    height = (height * maxSize) / width;
+                    width = maxSize;
+                } else if (height > maxSize) {
+                    width = (width * maxSize) / height;
+                    height = maxSize;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Compress to JPEG at 80% quality
+                callback(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            img.src = src;
         }
         
         function selectImage(pageIndex) {
@@ -543,7 +666,121 @@
                 slot.classList.remove('filled');
             }
             
+            slot.draggable = true;
+            slot.dataset.index = pageIndex;
+            slot.ondragstart = handleDragStart;
+            slot.ondragover = handleDragOver;
+            slot.ondrop = handleDrop;
+            slot.ondragend = handleDragEnd;
+            slot.ondragleave = handleDragLeave;
             slot.onclick = () => selectImage(pageIndex);
+            
+            // Reapply fit mode
+            updateAllPreviews();
+        }
+        
+        // Drag and drop functions
+        let draggedIndex = null;
+        
+        function handleDragStart(e) {
+            draggedIndex = parseInt(e.currentTarget.dataset.index);
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+            return false;
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+        
+        function handleDrop(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            
+            const dropIndex = parseInt(e.currentTarget.dataset.index);
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (draggedIndex !== null && draggedIndex !== dropIndex) {
+                // Swap pages
+                const temp = pages[draggedIndex];
+                pages[draggedIndex] = pages[dropIndex];
+                pages[dropIndex] = temp;
+                
+                updatePageSlot(draggedIndex);
+                updatePageSlot(dropIndex);
+                updateImpositionPreview();
+            }
+            
+            return false;
+        }
+        
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('.page-slot').forEach(slot => {
+                slot.classList.remove('drag-over');
+            });
+            draggedIndex = null;
+        }
+        
+        // Fit mode controls
+        function setFitMode(mode) {
+            fitMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('.btn-small').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${mode}`).classList.add('active');
+            
+            // Show/hide margin control
+            const marginControl = document.getElementById('marginControl');
+            if (mode === 'center') {
+                marginControl.style.display = 'block';
+            } else {
+                marginControl.style.display = 'none';
+            }
+            
+            // Update all previews
+            updateAllPreviews();
+        }
+        
+        function updateAllPreviews() {
+            // Remove all fit classes first
+            document.querySelectorAll('.page-slot').forEach(slot => {
+                slot.classList.remove('fit-center');
+            });
+            document.querySelectorAll('.mini-page').forEach(mini => {
+                mini.classList.remove('fit-center');
+            });
+            
+            // Apply current fit mode
+            if (fitMode === 'center') {
+                document.querySelectorAll('.page-slot').forEach(slot => {
+                    slot.classList.add('fit-center');
+                    const img = slot.querySelector('img');
+                    if (img) {
+                        img.style.padding = `${marginPercent}%`;
+                    }
+                });
+                document.querySelectorAll('.mini-page').forEach(mini => {
+                    mini.classList.add('fit-center');
+                    const img = mini.querySelector('img');
+                    if (img) {
+                        img.style.padding = `${marginPercent * 0.3}%`;
+                    }
+                });
+            } else {
+                // cover mode - remove padding
+                document.querySelectorAll('.page-slot img, .mini-page img').forEach(img => {
+                    img.style.padding = '0';
+                });
+            }
         }
         
         function removePage(pageIndex) {
@@ -593,9 +830,12 @@
                     miniPage.innerHTML = pageNum;
                 }
             });
+            
+            // Reapply fit mode
+            updateAllPreviews();
         }
         
-        function exportPDF() {
+        async function exportPDF() {
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({
                 orientation: 'landscape',
@@ -606,54 +846,124 @@
             const slotWidth = 105;
             const slotHeight = 148.5;
             
-            addImpositionPage(pdf, frontLayout, frontRotations, slotWidth, slotHeight);
+            // Process front page
+            await addPageToPDF(pdf, frontLayout, frontRotations, slotWidth, slotHeight);
             
+            // Add back page
             pdf.addPage();
-            addImpositionPage(pdf, backLayout, backRotations, slotWidth, slotHeight);
+            await addPageToPDF(pdf, backLayout, backRotations, slotWidth, slotHeight);
             
             pdf.save('a5-zine-imposition.pdf');
         }
         
-        function addImpositionPage(pdf, layout, rotations, slotWidth, slotHeight) {
+        async function addPageToPDF(pdf, layout, rotations, slotWidth, slotHeight) {
             const cols = 4;
             
-            layout.forEach((pageNum, index) => {
+            for (let index = 0; index < layout.length; index++) {
+                const pageNum = layout[index];
                 const row = Math.floor(index / cols);
                 const col = index % cols;
                 const x = col * slotWidth;
                 const y = row * slotHeight;
                 
                 if (pages[pageNum - 1] && pages[pageNum - 1].src) {
-                    try {
-                        const img = pages[pageNum - 1].src;
-                        
-                        if (rotations[index] === 180) {
-                            const rotated = rotateImage(img);
-                            pdf.addImage(rotated, 'JPEG', x, y, slotWidth, slotHeight);
-                        } else {
-                            pdf.addImage(img, 'JPEG', x, y, slotWidth, slotHeight);
-                        }
-                    } catch (error) {
-                        console.error('Error adding image:', error);
-                    }
+                    const imgSrc = pages[pageNum - 1].src;
+                    const needsFlip = rotations[index] === 180;
+                    
+                    // Flip image if needed, then add to PDF
+                    const processedImg = needsFlip ? await flipImage180(imgSrc) : imgSrc;
+                    await addImageToPDF(pdf, processedImg, x, y, slotWidth, slotHeight);
                 }
+            }
+        }
+        
+        function flipImage180(imageSrc) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Canvas same size as original image
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    
+                    // Flip both horizontally and vertically (= 180° rotation)
+                    ctx.scale(-1, -1);
+                    ctx.drawImage(img, -canvas.width, -canvas.height, canvas.width, canvas.height);
+                    
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = () => {
+                    console.error('Failed to flip image');
+                    resolve(imageSrc);
+                };
+                img.src = imageSrc;
             });
         }
         
-        function rotateImage(imageSrc) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = imageSrc;
-            
-            canvas.width = img.width;
-            canvas.height = img.height;
-            
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(Math.PI);
-            ctx.drawImage(img, -img.width / 2, -img.height / 2);
-            
-            return canvas.toDataURL('image/jpeg', 0.85);
+        function addImageToPDF(pdf, imgSrc, x, y, slotWidth, slotHeight) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function() {
+                    const imgWidth = img.naturalWidth;
+                    const imgHeight = img.naturalHeight;
+                    const imgRatio = imgWidth / imgHeight;
+                    const slotRatio = slotWidth / slotHeight;
+                    
+                    if (fitMode === 'cover') {
+                        // FILL MODE: Cover the slot completely, crop excess
+                        let drawWidth, drawHeight, drawX, drawY;
+                        
+                        if (imgRatio > slotRatio) {
+                            // Image wider than slot - fit to height, center horizontally
+                            drawHeight = slotHeight;
+                            drawWidth = drawHeight * imgRatio;
+                            drawX = x - (drawWidth - slotWidth) / 2;
+                            drawY = y;
+                        } else {
+                            // Image taller than slot - fit to width, center vertically
+                            drawWidth = slotWidth;
+                            drawHeight = drawWidth / imgRatio;
+                            drawX = x;
+                            drawY = y - (drawHeight - slotHeight) / 2;
+                        }
+                        
+                        pdf.addImage(imgSrc, 'JPEG', drawX, drawY, drawWidth, drawHeight);
+                        
+                    } else if (fitMode === 'center') {
+                        // MARGIN MODE: Fit within margin, show entire image
+                        const marginMM = (marginPercent / 100) * Math.min(slotWidth, slotHeight);
+                        const availWidth = slotWidth - (marginMM * 2);
+                        const availHeight = slotHeight - (marginMM * 2);
+                        const availRatio = availWidth / availHeight;
+                        
+                        let drawWidth, drawHeight;
+                        
+                        if (imgRatio > availRatio) {
+                            // Image wider - fit to available width
+                            drawWidth = availWidth;
+                            drawHeight = drawWidth / imgRatio;
+                        } else {
+                            // Image taller - fit to available height
+                            drawHeight = availHeight;
+                            drawWidth = drawHeight * imgRatio;
+                        }
+                        
+                        const drawX = x + (slotWidth - drawWidth) / 2;
+                        const drawY = y + (slotHeight - drawHeight) / 2;
+                        
+                        pdf.addImage(imgSrc, 'JPEG', drawX, drawY, drawWidth, drawHeight);
+                    }
+                    
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.error('Failed to load image for PDF');
+                    resolve();
+                };
+                img.src = imgSrc;
+            });
         }
         
         // Set PDF.js worker
