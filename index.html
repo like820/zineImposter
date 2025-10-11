@@ -122,6 +122,17 @@
             padding: 1em 2em;
         }
         
+        .btn-small {
+            padding: 0.5em 1em;
+            font-size: 0.9rem;
+        }
+        
+        .btn-small.active {
+            background: var(--back);
+            color: var(--main);
+            border: 0.082em solid var(--main);
+        }
+        
         .pages-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -246,7 +257,7 @@
         
         .sheet-preview h4 {
             margin-bottom: 15px;
-            color: #2c3e50;
+            color: var(--main);
         }
         
         .sheet-grid {
@@ -287,17 +298,6 @@
         
         .mini-page.fit-center img {
             object-fit: contain;
-        }
-        
-        .btn-small {
-            padding: 0.5em 1em;
-            font-size: 0.9rem;
-        }
-        
-        .btn-small.active {
-            background: var(--back);
-            color: var(--main);
-            border: 0.082em solid var(--main);
         }
         
         input[type="range"] {
@@ -386,7 +386,7 @@
             
             <div class="section">
                 <h2>📄 Page Order (1-16)</h2>
-                <p style="margin-bottom: 15px; color: #666;">Click any page to change its image</p>
+                <p style="margin-bottom: 15px; color: #666;">Click any page to change its image • Drag to reorder</p>
                 
                 <div class="pages-grid" id="pagesGrid"></div>
             </div>
@@ -412,7 +412,7 @@
 
     <script>
         const pages = new Array(16).fill(null);
-        let fitMode = 'cover'; // 'cover', 'contain', 'center'
+        let fitMode = 'cover';
         let marginPercent = 10;
         
         // Correct imposition with backside upside down
@@ -425,9 +425,8 @@
             createPageSlots();
             createImpositionPreview();
             setupEventListeners();
-            setFitMode('cover'); // Set default
+            setFitMode('cover');
             
-            // Margin slider
             const marginSlider = document.getElementById('marginSlider');
             const marginValue = document.getElementById('marginValue');
             marginSlider.oninput = function() {
@@ -452,7 +451,6 @@
                     <button class="remove-btn" onclick="removePage(${i})">×</button>
                 `;
                 
-                // Drag and drop events
                 slot.ondragstart = handleDragStart;
                 slot.ondragover = handleDragOver;
                 slot.ondrop = handleDrop;
@@ -470,26 +468,26 @@
             
             frontGrid.innerHTML = '';
             frontLayout.forEach((pageNum, index) => {
-                const miniPage = document.createElement('div');
-                miniPage.className = 'mini-page';
-                miniPage.id = `front-${index}`;
-                miniPage.textContent = pageNum;
+                const miniDiv = document.createElement('div');
+                miniDiv.className = 'mini-page';
+                miniDiv.id = `front-pos-${index}`;
                 if (frontRotations[index] === 180) {
-                    miniPage.classList.add('upside-down');
+                    miniDiv.classList.add('upside-down');
                 }
-                frontGrid.appendChild(miniPage);
+                miniDiv.textContent = pageNum;
+                frontGrid.appendChild(miniDiv);
             });
             
             backGrid.innerHTML = '';
             backLayout.forEach((pageNum, index) => {
-                const miniPage = document.createElement('div');
-                miniPage.className = 'mini-page';
-                miniPage.id = `back-${index}`;
-                miniPage.textContent = pageNum;
+                const miniDiv = document.createElement('div');
+                miniDiv.className = 'mini-page';
+                miniDiv.id = `back-pos-${index}`;
                 if (backRotations[index] === 180) {
-                    miniPage.classList.add('upside-down');
+                    miniDiv.classList.add('upside-down');
                 }
-                backGrid.appendChild(miniPage);
+                miniDiv.textContent = pageNum;
+                backGrid.appendChild(miniDiv);
             });
         }
         
@@ -522,14 +520,12 @@
         function handleFiles(files) {
             const filesArray = Array.from(files);
             
-            // Check for PDF first
             const pdfFile = filesArray.find(f => f.type === 'application/pdf');
             if (pdfFile) {
                 loadPDFPages(pdfFile);
                 return;
             }
             
-            // Handle regular images
             let nextSlot = 0;
             filesArray.forEach((file) => {
                 if (file.type.startsWith('image/')) {
@@ -544,54 +540,9 @@
             });
         }
         
-        function loadPDFPages(file) {
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const loadingTask = pdfjsLib.getDocument({data: e.target.result});
-                    const pdf = await loadingTask.promise;
-                    const numPages = Math.min(pdf.numPages, 16);
-                    
-                    for (let i = 1; i <= numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const scale = 1.5; // Reduced from 2 for smaller file size
-                        const viewport = page.getViewport({scale: scale});
-                        
-                        const canvas = document.createElement('canvas');
-                        const context = canvas.getContext('2d');
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        
-                        await page.render({
-                            canvasContext: context,
-                            viewport: viewport
-                        }).promise;
-                        
-                        // Optimize with lower quality for smaller file
-                        const imageData = canvas.toDataURL('image/jpeg', 0.7);
-                        
-                        pages[i - 1] = {
-                            src: imageData,
-                            name: `${file.name} - Page ${i}`
-                        };
-                        
-                        updatePageSlot(i - 1);
-                    }
-                    
-                    updateProgress();
-                    updateImpositionPreview();
-                } catch (error) {
-                    console.error('Error loading PDF:', error);
-                    alert('Error loading PDF. Please try again.');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-        
         function loadImage(file, pageIndex) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                // Optimize image before storing
                 optimizeImage(e.target.result, (optimizedSrc) => {
                     pages[pageIndex] = {
                         src: optimizedSrc,
@@ -611,7 +562,6 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Calculate optimal size (max 1500px on longest side)
                 const maxSize = 1500;
                 let width = img.width;
                 let height = img.height;
@@ -628,7 +578,6 @@
                 canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Compress to JPEG at 80% quality
                 callback(canvas.toDataURL('image/jpeg', 0.8));
             };
             img.src = src;
@@ -675,11 +624,9 @@
             slot.ondragleave = handleDragLeave;
             slot.onclick = () => selectImage(pageIndex);
             
-            // Reapply fit mode
             updateAllPreviews();
         }
         
-        // Drag and drop functions
         let draggedIndex = null;
         
         function handleDragStart(e) {
@@ -707,7 +654,6 @@
             e.currentTarget.classList.remove('drag-over');
             
             if (draggedIndex !== null && draggedIndex !== dropIndex) {
-                // Swap pages
                 const temp = pages[draggedIndex];
                 pages[draggedIndex] = pages[dropIndex];
                 pages[dropIndex] = temp;
@@ -728,17 +674,14 @@
             draggedIndex = null;
         }
         
-        // Fit mode controls
         function setFitMode(mode) {
             fitMode = mode;
             
-            // Update button states
             document.querySelectorAll('.btn-small').forEach(btn => {
                 btn.classList.remove('active');
             });
             document.getElementById(`btn-${mode}`).classList.add('active');
             
-            // Show/hide margin control
             const marginControl = document.getElementById('marginControl');
             if (mode === 'center') {
                 marginControl.style.display = 'block';
@@ -746,12 +689,10 @@
                 marginControl.style.display = 'none';
             }
             
-            // Update all previews
             updateAllPreviews();
         }
         
         function updateAllPreviews() {
-            // Remove all fit classes first
             document.querySelectorAll('.page-slot').forEach(slot => {
                 slot.classList.remove('fit-center');
             });
@@ -759,7 +700,6 @@
                 mini.classList.remove('fit-center');
             });
             
-            // Apply current fit mode
             if (fitMode === 'center') {
                 document.querySelectorAll('.page-slot').forEach(slot => {
                     slot.classList.add('fit-center');
@@ -776,7 +716,6 @@
                     }
                 });
             } else {
-                // cover mode - remove padding
                 document.querySelectorAll('.page-slot img, .mini-page img').forEach(img => {
                     img.style.padding = '0';
                 });
@@ -814,7 +753,7 @@
         
         function updateImpositionPreview() {
             frontLayout.forEach((pageNum, index) => {
-                const miniPage = document.getElementById(`front-${index}`);
+                const miniPage = document.getElementById(`front-pos-${index}`);
                 if (pages[pageNum - 1] && pages[pageNum - 1].src) {
                     miniPage.innerHTML = `<img src="${pages[pageNum - 1].src}" alt="Page ${pageNum}">`;
                 } else {
@@ -823,7 +762,7 @@
             });
             
             backLayout.forEach((pageNum, index) => {
-                const miniPage = document.getElementById(`back-${index}`);
+                const miniPage = document.getElementById(`back-pos-${index}`);
                 if (pages[pageNum - 1] && pages[pageNum - 1].src) {
                     miniPage.innerHTML = `<img src="${pages[pageNum - 1].src}" alt="Page ${pageNum}">`;
                 } else {
@@ -831,8 +770,50 @@
                 }
             });
             
-            // Reapply fit mode
             updateAllPreviews();
+        }
+        
+        function loadPDFPages(file) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const loadingTask = pdfjsLib.getDocument({data: e.target.result});
+                    const pdf = await loadingTask.promise;
+                    const numPages = Math.min(pdf.numPages, 16);
+                    
+                    for (let i = 1; i <= numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const scale = 1.5;
+                        const viewport = page.getViewport({scale: scale});
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+                        
+                        const imageData = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        pages[i - 1] = {
+                            src: imageData,
+                            name: `${file.name} - Page ${i}`
+                        };
+                        
+                        updatePageSlot(i - 1);
+                    }
+                    
+                    updateProgress();
+                    updateImpositionPreview();
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                    alert('Error loading PDF. Please try again.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
         
         async function exportPDF() {
@@ -846,10 +827,8 @@
             const slotWidth = 105;
             const slotHeight = 148.5;
             
-            // Process front page
             await addPageToPDF(pdf, frontLayout, frontRotations, slotWidth, slotHeight);
             
-            // Add back page
             pdf.addPage();
             await addPageToPDF(pdf, backLayout, backRotations, slotWidth, slotHeight);
             
@@ -870,7 +849,6 @@
                     const imgSrc = pages[pageNum - 1].src;
                     const needsFlip = rotations[index] === 180;
                     
-                    // Flip image if needed, then add to PDF
                     const processedImg = needsFlip ? await flipImage180(imgSrc) : imgSrc;
                     await addImageToPDF(pdf, processedImg, x, y, slotWidth, slotHeight);
                 }
@@ -884,11 +862,9 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    // Canvas same size as original image
                     canvas.width = img.naturalWidth;
                     canvas.height = img.naturalHeight;
                     
-                    // Flip both horizontally and vertically (= 180° rotation)
                     ctx.scale(-1, -1);
                     ctx.drawImage(img, -canvas.width, -canvas.height, canvas.width, canvas.height);
                     
@@ -912,27 +888,41 @@
                     const slotRatio = slotWidth / slotHeight;
                     
                     if (fitMode === 'cover') {
-                        // FILL MODE: Cover the slot completely, crop excess
-                        let drawWidth, drawHeight, drawX, drawY;
+                        // FILL MODE: Pre-crop the image to exact slot dimensions
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Canvas is exact slot size in pixels
+                        const pxPerMM = 10; // Roughly 10 pixels per mm for good quality
+                        canvas.width = slotWidth * pxPerMM;
+                        canvas.height = slotHeight * pxPerMM;
+                        
+                        // Calculate how to crop the source image
+                        let srcX, srcY, srcWidth, srcHeight;
                         
                         if (imgRatio > slotRatio) {
-                            // Image wider than slot - fit to height, center horizontally
-                            drawHeight = slotHeight;
-                            drawWidth = drawHeight * imgRatio;
-                            drawX = x - (drawWidth - slotWidth) / 2;
-                            drawY = y;
+                            // Image is wider - crop sides
+                            srcHeight = imgHeight;
+                            srcWidth = imgHeight * slotRatio;
+                            srcX = (imgWidth - srcWidth) / 2;
+                            srcY = 0;
                         } else {
-                            // Image taller than slot - fit to width, center vertically
-                            drawWidth = slotWidth;
-                            drawHeight = drawWidth / imgRatio;
-                            drawX = x;
-                            drawY = y - (drawHeight - slotHeight) / 2;
+                            // Image is taller - crop top/bottom
+                            srcWidth = imgWidth;
+                            srcHeight = imgWidth / slotRatio;
+                            srcX = 0;
+                            srcY = (imgHeight - srcHeight) / 2;
                         }
                         
-                        pdf.addImage(imgSrc, 'JPEG', drawX, drawY, drawWidth, drawHeight);
+                        // Draw cropped image to canvas
+                        ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, canvas.width, canvas.height);
+                        
+                        // Add the pre-cropped image at exact slot size
+                        const croppedImg = canvas.toDataURL('image/jpeg', 0.85);
+                        pdf.addImage(croppedImg, 'JPEG', x, y, slotWidth, slotHeight);
                         
                     } else if (fitMode === 'center') {
-                        // MARGIN MODE: Fit within margin, show entire image
+                        // MARGIN MODE: Fit within margin
                         const marginMM = (marginPercent / 100) * Math.min(slotWidth, slotHeight);
                         const availWidth = slotWidth - (marginMM * 2);
                         const availHeight = slotHeight - (marginMM * 2);
@@ -941,11 +931,9 @@
                         let drawWidth, drawHeight;
                         
                         if (imgRatio > availRatio) {
-                            // Image wider - fit to available width
                             drawWidth = availWidth;
                             drawHeight = drawWidth / imgRatio;
                         } else {
-                            // Image taller - fit to available height
                             drawHeight = availHeight;
                             drawWidth = drawHeight * imgRatio;
                         }
@@ -966,9 +954,8 @@
             });
         }
         
-        // Set PDF.js worker
+        // Set PDF.js worker and start the app
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        
         init();
     </script>
 </body>
