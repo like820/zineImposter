@@ -1262,10 +1262,10 @@
                 
                 if (pages[pageNum - 1] && pages[pageNum - 1].src) {
                     const imgSrc = pages[pageNum - 1].src;
-                    const needsFlip = rotations[index] === 180;
-                    
-                    const processedImg = needsFlip ? await flipImage180(imgSrc) : imgSrc;
-                    await addImageToPDF(pdf, processedImg, x, y, slotWidth, slotHeight, pageNum - 1);
+                    const rotationDeg = rotations && rotations[index] ? rotations[index] : 0;
+
+                    const processedImg = rotationDeg === 180 ? await flipImage180(imgSrc) : imgSrc;
+                    await addImageToPDF(pdf, processedImg, x, y, slotWidth, slotHeight, pageNum - 1, rotationDeg);
                 }
             }
         }
@@ -1293,7 +1293,7 @@
             });
         }
         
-        function addImageToPDF(pdf, imgSrc, x, y, slotWidth, slotHeight, pageIndex) {
+        function addImageToPDF(pdf, imgSrc, x, y, slotWidth, slotHeight, pageIndex, rotationDeg = 0) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = function() {
@@ -1355,7 +1355,12 @@
                         const pageNum = pageIndex - pageNumberStart + 2;
                         pdf.setFontSize(8);
                         pdf.setTextColor(100, 100, 100);
-                        pdf.text(pageNum.toString(), x + slotWidth - 5, y + slotHeight - 3);
+                        if (rotationDeg === 180) {
+                            // Draw rotated page number so it appears correctly on the assembled zine
+                            pdf.text(pageNum.toString(), x + 5, y + 3, { angle: 180 });
+                        } else {
+                            pdf.text(pageNum.toString(), x + slotWidth - 5, y + slotHeight - 3);
+                        }
                     }
                     
                     if (showStamp && pageIndex === 15 && (stampAuthor || stampDate)) {
