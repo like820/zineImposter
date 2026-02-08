@@ -214,6 +214,46 @@
             opacity: 1;
         }
         
+        .spread-btn {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--main);
+            color: var(--back);
+            border: none;
+            padding: 0.3em 0.6em;
+            cursor: pointer;
+            font-size: 0.7rem;
+            z-index: 10;
+            font-family: "Source Code Pro", monospace;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+        
+        .spread-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
+        
+        .spread-label {
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--back);
+            color: var(--main);
+            border: 0.082em solid var(--main);
+            padding: 0.2em 0.5em;
+            font-size: 0.65rem;
+            z-index: 9;
+            white-space: nowrap;
+        }
+        
+        .page-slot.spread-page {
+            border-color: var(--main);
+            border-width: 0.164em;
+        }
+        
         .progress {
             margin: 20px 0;
         }
@@ -351,7 +391,8 @@
                 
                 <div class="info-box">
                     <strong>16-Page A5 Zine from A3 Paper</strong><br>
-                    Upload images for your zine. Select multiple files at once!
+                    Upload images for your zine. Select multiple files at once!<br>
+                    <strong>2-Page Spreads:</strong> Use the 🔗 buttons to add horizontal images across two pages (2-3, 4-5, etc.)
                 </div>
                 
                 <div class="upload-area" id="uploadArea">
@@ -359,6 +400,12 @@
                     <p><strong>Click or drag images here</strong></p>
                     <p>Multiple images • PDF (16 pages) • JPG, PNG</p>
                     <input type="file" class="file-input" id="fileInput" multiple accept="image/*,application/pdf">
+                </div>
+                
+                <div id="uploadOptions" style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="loadPdfAsSpreads"> Load as Spreads (2-page pairs)
+                    </label>
                 </div>
                 
                 <div class="progress">
@@ -382,18 +429,51 @@
                         <input type="range" id="marginSlider" min="0" max="30" value="10" style="width: 100%;">
                     </div>
                 </div>
+                
+                <div class="controls" style="margin-top: 2em; padding: 1em; border: 0.082em dashed var(--main);">
+                    <h3 style="margin-bottom: 1em; font-weight: 400;">Page Numbering</h3>
+                    <label style="display: block; margin-bottom: 0.5em;">
+                        <input type="checkbox" id="pageNumberCheckbox" onchange="togglePageNumbering()"> Add page numbers
+                    </label>
+                    <div id="pageNumberOptions" style="display: none; margin-top: 0.5em;">
+                        <label style="display: block; margin-bottom: 0.5em;">
+                            Start from: 
+                            <select id="pageNumberStart" onchange="updatePageNumberStart()" style="margin-left: 0.5em; padding: 0.25em; font-family: inherit;">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="controls" style="margin-top: 2em; padding: 1em; border: 0.082em dashed var(--main);">
+                    <h3 style="margin-bottom: 1em; font-weight: 400;">Stamp (Last Page)</h3>
+                    <label style="display: block; margin-bottom: 0.5em;">
+                        <input type="checkbox" id="stampCheckbox" onchange="toggleStamp()"> Add stamp
+                    </label>
+                    <div id="stampOptions" style="display: none; margin-top: 0.5em;">
+                        <label style="display: block; margin-bottom: 0.5em;">
+                            Made by:
+                            <input type="text" id="stampAuthor" placeholder="Your name" style="width: 100%; padding: 0.5em; margin-top: 0.25em; font-family: inherit;">
+                        </label>
+                        <label style="display: block; margin-bottom: 0.5em;">
+                            In:
+                            <input type="text" id="stampDate" placeholder="Year/Date" style="width: 100%; padding: 0.5em; margin-top: 0.25em; font-family: inherit;">
+                        </label>
+                    </div>
+                </div>
             </div>
             
             <div class="section">
                 <h2>📄 Page Order (1-16)</h2>
-                <p style="margin-bottom: 15px; color: #666;">Click any page to change its image • Drag to reorder</p>
+                <p style="margin-bottom: 15px; color: #666;">Click any page to change its image • Drag to reorder • Use 🔗 for spreads</p>
                 
                 <div class="pages-grid" id="pagesGrid"></div>
             </div>
         </div>
         
         <div class="section preview-section">
-            <h2>🔄 Print Layout Preview</h2>
+            <h2>📄 Print Layout Preview</h2>
             <p style="margin-bottom: 20px;">This shows how pages will be arranged on A3 paper. Pink boxes are upside-down.</p>
             
             <div class="imposition-container">
@@ -408,25 +488,33 @@
                 </div>
             </div>
         </div>
-          <div class="section">
-           
-                <a href="mailto:m@waterlike.tools">     
-                    email it to print 💌
-                </a>
-                <div class="pages-grid" id="pagesGrid"></div>
+        
+        <!-- Instruction Carousel -->
+        <div style="margin-top: 40px; padding: 20px; border-top: 2px solid var(--main); text-align: center;">
+            <h2>📖 Quick Tutorial</h2>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 20px;">
+                <button class="btn" onclick="prevImage()" style="padding: 10px 15px; font-size: 1.5rem;">←</button>
+                <div style="max-width: 600px;">
+                    <img id="carouselImg" src="" style="max-width: 100%; height: auto; border: 2px solid var(--main); border-radius: 8px;">
+                    <p id="carouselCounter" style="margin-top: 10px; font-size: 0.9rem; color: var(--main);"></p>
+                </div>
+                <button class="btn" onclick="nextImage()" style="padding: 10px 15px; font-size: 1.5rem;">→</button>
             </div>
         </div>
     </div>
 
-          
-        
-
     <script>
         const pages = new Array(16).fill(null);
+        const spreads = {};
         let fitMode = 'cover';
         let marginPercent = 10;
+        let pageNumbering = false;
+        let pageNumberStart = 1;
+        let showStamp = false;
+        let stampAuthor = '';
+        let stampDate = '';
+        let uploadedFileName = 'a5-zine-imposition';
         
-        // Correct imposition with backside upside down
         const frontLayout = [9, 8, 5, 12, 16, 1, 4, 13];
         const backLayout = [11, 6, 7, 10, 14, 3, 2, 15];
         const frontRotations = [180, 180, 180, 180, 0, 0, 0, 0];
@@ -445,6 +533,228 @@
                 marginValue.textContent = this.value;
                 updateAllPreviews();
             };
+            
+            document.getElementById('stampAuthor').oninput = function() {
+                stampAuthor = this.value;
+            };
+            
+            document.getElementById('stampDate').oninput = function() {
+                stampDate = this.value;
+            };
+        }
+        
+        function togglePageNumbering() {
+            pageNumbering = document.getElementById('pageNumberCheckbox').checked;
+            const options = document.getElementById('pageNumberOptions');
+            options.style.display = pageNumbering ? 'block' : 'none';
+        }
+        
+        function updatePageNumberStart() {
+            pageNumberStart = parseInt(document.getElementById('pageNumberStart').value);
+        }
+        
+        function toggleStamp() {
+            showStamp = document.getElementById('stampCheckbox').checked;
+            const options = document.getElementById('stampOptions');
+            options.style.display = showStamp ? 'block' : 'none';
+        }
+        
+        function canCreateSpread(index) {
+            if (index === 15) return true;
+            if ((index + 1) % 2 === 0 && index >= 1 && index <= 14) return true;
+            return false;
+        }
+        
+        function getSpreadPartner(index) {
+            if (index === 15) return 0;
+            return index + 1;
+        }
+        
+        function toggleSpread(index) {
+            const partner = getSpreadPartner(index);
+            const spreadKey = `${index}-${partner}`;
+            
+            if (spreads[spreadKey]) {
+                delete spreads[spreadKey];
+                pages[index] = null;
+                pages[partner] = null;
+            } else {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,application/pdf';
+                input.multiple = true;
+                input.onchange = (e) => {
+                    if (e.target.files.length > 0) {
+                        handleSpreadFiles(e.target.files, index);
+                    }
+                };
+                input.click();
+                return;
+            }
+            
+            updatePageSlot(index);
+            updatePageSlot(partner);
+            updateProgress();
+            updateImpositionPreview();
+        }
+        
+        function handleSpreadFiles(files, startIndex) {
+            const filesArray = Array.from(files);
+            
+            const pdfFile = filesArray.find(f => f.type === 'application/pdf');
+            if (pdfFile) {
+                loadPDFForSpreads(pdfFile, startIndex);
+                return;
+            }
+            
+            const imageFiles = filesArray.filter(f => f.type.startsWith('image/'));
+            
+            if (imageFiles.length === 1) {
+                const partner = getSpreadPartner(startIndex);
+                loadSpreadImage(imageFiles[0], startIndex, partner);
+            } else {
+                let currentIndex = startIndex;
+                imageFiles.forEach((file, fileIdx) => {
+                    while (currentIndex < 16) {
+                        const isPartOfExistingSpread = Object.keys(spreads).some(key => {
+                            const [left, right] = key.split('-').map(Number);
+                            return left === currentIndex || right === currentIndex;
+                        });
+                        
+                        if (!isPartOfExistingSpread) {
+                            break;
+                        }
+                        currentIndex++;
+                    }
+                    
+                    if (currentIndex >= 16) return;
+                    
+                    loadImage(file, currentIndex);
+                    currentIndex++;
+                });
+            }
+        }
+        
+        function loadPDFForSpreads(file, startIndex) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const loadingTask = pdfjsLib.getDocument({data: e.target.result});
+                    const pdf = await loadingTask.promise;
+
+                    const numPages = Math.min(pdf.numPages, 8); // Up to 8 spreads for 16 pages
+
+                    // Mapping for zine spreads: each PDF page is a spread, split into two pages
+                    const spreadPairs = [
+                        [16, 1], // Spread 1: left half -> page 16, right half -> page 1
+                        [2, 3],  // Spread 2: left -> page 2, right -> page 3
+                        [4, 5],  // Spread 3: left -> page 4, right -> page 5
+                        [6, 7],  // Spread 4: left -> page 6, right -> page 7
+                        [8, 9],  // Spread 5: left -> page 8, right -> page 9
+                        [10, 11], // Spread 6: left -> page 10, right -> page 11
+                        [12, 13], // Spread 7: left -> page 12, right -> page 13
+                        [14, 15] // Spread 8: left -> page 14, right -> page 15
+                    ];
+
+                    for (let i = 0; i < numPages; i++) {
+                        const page = await pdf.getPage(i + 1);
+                        const scale = 1.5;
+                        const viewport = page.getViewport({scale: scale});
+
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+
+                        await page.render({
+                            canvasContext: ctx,
+                            viewport: viewport
+                        }).promise;
+
+                        // Split the canvas vertically in the middle
+                        const halfWidth = Math.floor(canvas.width / 2);
+
+                        // Left half
+                        const leftCanvas = document.createElement('canvas');
+                        leftCanvas.width = halfWidth;
+                        leftCanvas.height = canvas.height;
+                        const leftCtx = leftCanvas.getContext('2d');
+                        leftCtx.drawImage(canvas, 0, 0, halfWidth, canvas.height, 0, 0, halfWidth, canvas.height);
+                        const leftSrc = leftCanvas.toDataURL('image/png');
+
+                        // Right half
+                        const rightCanvas = document.createElement('canvas');
+                        rightCanvas.width = halfWidth;
+                        rightCanvas.height = canvas.height;
+                        const rightCtx = rightCanvas.getContext('2d');
+                        rightCtx.drawImage(canvas, halfWidth, 0, halfWidth, canvas.height, 0, 0, halfWidth, canvas.height);
+                        const rightSrc = rightCanvas.toDataURL('image/png');
+
+                        // Assign to the correct page numbers
+                        const [pageA, pageB] = spreadPairs[i];
+                        pages[pageA - 1] = {
+                            src: leftSrc,
+                            name: `${file.name} - Spread ${i + 1} Left (Page ${pageA})`
+                        };
+                        pages[pageB - 1] = {
+                            src: rightSrc,
+                            name: `${file.name} - Spread ${i + 1} Right (Page ${pageB})`
+                        };
+
+                        updatePageSlot(pageA - 1);
+                        updatePageSlot(pageB - 1);
+                    }
+
+                    updateProgress();
+                    updateImpositionPreview();
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                    alert('Error loading PDF. Please try again.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function loadSpreadImage(file, leftIndex, rightIndex) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                optimizeImage(e.target.result, (optimizedSrc) => {
+                    splitImageForSpread(optimizedSrc, leftIndex, rightIndex, file.name);
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function splitImageForSpread(imgSrc, leftIndex, rightIndex, fileName) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const halfWidth = img.width / 2;
+                canvas.width = halfWidth;
+                canvas.height = img.height;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, halfWidth, img.height, 0, 0, halfWidth, img.height);
+                const leftSrc = canvas.toDataURL('image/jpeg', 0.8);
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, halfWidth, 0, halfWidth, img.height, 0, 0, halfWidth, img.height);
+                const rightSrc = canvas.toDataURL('image/jpeg', 0.8);
+                
+                pages[leftIndex] = { src: leftSrc, name: `${fileName} (left)`, spreadPart: 'left' };
+                pages[rightIndex] = { src: rightSrc, name: `${fileName} (right)`, spreadPart: 'right' };
+                
+                const spreadKey = `${leftIndex}-${rightIndex}`;
+                spreads[spreadKey] = { original: imgSrc, fileName: fileName };
+                
+                updatePageSlot(leftIndex);
+                updatePageSlot(rightIndex);
+                updateProgress();
+                updateImpositionPreview();
+            };
+            img.src = imgSrc;
         }
         
         function createPageSlots() {
@@ -456,8 +766,16 @@
                 slot.className = 'page-slot';
                 slot.draggable = true;
                 slot.dataset.index = i;
+                
+                let spreadBtn = '';
+                if (canCreateSpread(i)) {
+                    const partner = getSpreadPartner(i);
+                    spreadBtn = `<button class="spread-btn" onclick="event.stopPropagation(); toggleSpread(${i})">🔗 ${i + 1}-${partner + 1}</button>`;
+                }
+                
                 slot.innerHTML = `
                     <div class="page-number">${i + 1}</div>
+                    ${spreadBtn}
                     <div style="color: #ccc; font-size: 2rem;">📄</div>
                     <button class="remove-btn" onclick="removePage(${i})">×</button>
                 `;
@@ -533,22 +851,61 @@
             
             const pdfFile = filesArray.find(f => f.type === 'application/pdf');
             if (pdfFile) {
-                loadPDFPages(pdfFile);
+                uploadedFileName = pdfFile.name.replace(/\.pdf$/i, '');
+                const loadAsSpreads = document.getElementById('loadPdfAsSpreads').checked;
+                if (loadAsSpreads) {
+                    loadPDFForSpreads(pdfFile, 0);  // Start from index 0
+                } else {
+                    loadPDFPages(pdfFile);
+                }
                 return;
             }
             
-            let nextSlot = 0;
-            filesArray.forEach((file) => {
-                if (file.type.startsWith('image/')) {
+            const loadAsSpreads = document.getElementById('loadPdfAsSpreads').checked;
+            const imageFiles = filesArray.filter(f => f.type.startsWith('image/'));
+
+            if (imageFiles.length > 0 && loadAsSpreads) {
+                // Place images sequentially into the zine spread order:
+                // Spread order: [16-1], [2-3], [4-5], [6-7], [8-9], [10-11], [12-13], [14-15]
+                const spreadPairs = [
+                    [16, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15]
+                ].map(p => [p[0] - 1, p[1] - 1]); // convert to 0-based indices
+
+                for (let i = 0; i < imageFiles.length && i < spreadPairs.length; i++) {
+                    const file = imageFiles[i];
+                    uploadedFileName = file.name.replace(/\.[^/.]+$/, '');
+
+                    // Prefer the same spread slot for each image (preserve original sequence).
+                    // If that slot is occupied, find the next free spread slot.
+                    let target = i;
+                    const [leftCandidate, rightCandidate] = spreadPairs[target];
+                    if (pages[leftCandidate] || pages[rightCandidate]) {
+                        let found = -1;
+                        for (let j = 0; j < spreadPairs.length; j++) {
+                            const [l, r] = spreadPairs[j];
+                            if (!pages[l] && !pages[r]) { found = j; break; }
+                        }
+                        if (found === -1) continue; // no space
+                        target = found;
+                    }
+
+                    const [leftIndex, rightIndex] = spreadPairs[target];
+                    loadSpreadImage(file, leftIndex, rightIndex);
+                }
+            } else {
+                // Load images as single pages
+                let nextSlot = 0;
+                imageFiles.forEach((file) => {
                     while (nextSlot < 16 && pages[nextSlot] !== null) {
                         nextSlot++;
                     }
                     if (nextSlot < 16) {
+                        uploadedFileName = file.name.replace(/\.[^/.]+$/, '');
                         loadImage(file, nextSlot);
                         nextSlot++;
                     }
-                }
-            });
+                });
+            }
         }
         
         function loadImage(file, pageIndex) {
@@ -573,7 +930,7 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                const maxSize = 1500;
+                const maxSize = 4200;
                 let width = img.width;
                 let height = img.height;
                 
@@ -595,6 +952,16 @@
         }
         
         function selectImage(pageIndex) {
+            const isPartOfSpread = Object.keys(spreads).some(key => {
+                const [left, right] = key.split('-').map(Number);
+                return left === pageIndex || right === pageIndex;
+            });
+            
+            if (isPartOfSpread) {
+                alert('This page is part of a 2-page spread. Remove the spread first to add a single image.');
+                return;
+            }
+            
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
@@ -610,20 +977,41 @@
             const slots = document.querySelectorAll('.page-slot');
             const slot = slots[pageIndex];
             
+            const spreadKey = Object.keys(spreads).find(key => {
+                const [left, right] = key.split('-').map(Number);
+                return left === pageIndex || right === pageIndex;
+            });
+            
+            let spreadBtn = '';
+            if (canCreateSpread(pageIndex)) {
+                const partner = getSpreadPartner(pageIndex);
+                const btnText = spreadKey ? '🔓 Unlink' : `🔗 ${pageIndex + 1}-${partner + 1}`;
+                spreadBtn = `<button class="spread-btn" onclick="event.stopPropagation(); toggleSpread(${pageIndex})">${btnText}</button>`;
+            }
+            
             if (pages[pageIndex]) {
+                const isSpread = pages[pageIndex].spreadPart;
+                const spreadLabel = isSpread ? `<div class="spread-label">${isSpread} half</div>` : '';
+                
                 slot.innerHTML = `
                     <div class="page-number">${pageIndex + 1}</div>
+                    ${spreadBtn}
+                    ${spreadLabel}
                     <img src="${pages[pageIndex].src}" alt="Page ${pageIndex + 1}">
                     <button class="remove-btn" onclick="removePage(${pageIndex})">×</button>
                 `;
                 slot.classList.add('filled');
+                if (isSpread) {
+                    slot.classList.add('spread-page');
+                }
             } else {
                 slot.innerHTML = `
                     <div class="page-number">${pageIndex + 1}</div>
+                    ${spreadBtn}
                     <div style="color: #ccc; font-size: 2rem;">📄</div>
                     <button class="remove-btn" onclick="removePage(${pageIndex})">×</button>
                 `;
-                slot.classList.remove('filled');
+                slot.classList.remove('filled', 'spread-page');
             }
             
             slot.draggable = true;
@@ -734,8 +1122,23 @@
         }
         
         function removePage(pageIndex) {
-            pages[pageIndex] = null;
-            updatePageSlot(pageIndex);
+            const spreadKey = Object.keys(spreads).find(key => {
+                const [left, right] = key.split('-').map(Number);
+                return left === pageIndex || right === pageIndex;
+            });
+            
+            if (spreadKey) {
+                const [left, right] = spreadKey.split('-').map(Number);
+                delete spreads[spreadKey];
+                pages[left] = null;
+                pages[right] = null;
+                updatePageSlot(left);
+                updatePageSlot(right);
+            } else {
+                pages[pageIndex] = null;
+                updatePageSlot(pageIndex);
+            }
+            
             updateProgress();
             updateImpositionPreview();
         }
@@ -745,6 +1148,7 @@
                 pages[i] = null;
                 updatePageSlot(i);
             }
+            Object.keys(spreads).forEach(key => delete spreads[key]);
             updateProgress();
             updateImpositionPreview();
         }
@@ -843,7 +1247,7 @@
             pdf.addPage();
             await addPageToPDF(pdf, backLayout, backRotations, slotWidth, slotHeight);
             
-            pdf.save('a5-zine-imposition.pdf');
+            pdf.save(`${uploadedFileName}-imposition.pdf`);
         }
         
         async function addPageToPDF(pdf, layout, rotations, slotWidth, slotHeight) {
@@ -861,7 +1265,7 @@
                     const needsFlip = rotations[index] === 180;
                     
                     const processedImg = needsFlip ? await flipImage180(imgSrc) : imgSrc;
-                    await addImageToPDF(pdf, processedImg, x, y, slotWidth, slotHeight);
+                    await addImageToPDF(pdf, processedImg, x, y, slotWidth, slotHeight, pageNum - 1);
                 }
             }
         }
@@ -889,7 +1293,7 @@
             });
         }
         
-        function addImageToPDF(pdf, imgSrc, x, y, slotWidth, slotHeight) {
+        function addImageToPDF(pdf, imgSrc, x, y, slotWidth, slotHeight, pageIndex) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = function() {
@@ -899,41 +1303,33 @@
                     const slotRatio = slotWidth / slotHeight;
                     
                     if (fitMode === 'cover') {
-                        // FILL MODE: Pre-crop the image to exact slot dimensions
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
                         
-                        // Canvas is exact slot size in pixels
-                        const pxPerMM = 10; // Roughly 10 pixels per mm for good quality
+                        const pxPerMM = 10;
                         canvas.width = slotWidth * pxPerMM;
                         canvas.height = slotHeight * pxPerMM;
                         
-                        // Calculate how to crop the source image
                         let srcX, srcY, srcWidth, srcHeight;
                         
                         if (imgRatio > slotRatio) {
-                            // Image is wider - crop sides
                             srcHeight = imgHeight;
                             srcWidth = imgHeight * slotRatio;
                             srcX = (imgWidth - srcWidth) / 2;
                             srcY = 0;
                         } else {
-                            // Image is taller - crop top/bottom
                             srcWidth = imgWidth;
                             srcHeight = imgWidth / slotRatio;
                             srcX = 0;
                             srcY = (imgHeight - srcHeight) / 2;
                         }
                         
-                        // Draw cropped image to canvas
                         ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, canvas.width, canvas.height);
                         
-                        // Add the pre-cropped image at exact slot size
                         const croppedImg = canvas.toDataURL('image/jpeg', 0.85);
                         pdf.addImage(croppedImg, 'JPEG', x, y, slotWidth, slotHeight);
                         
                     } else if (fitMode === 'center') {
-                        // MARGIN MODE: Fit within margin
                         const marginMM = (marginPercent / 100) * Math.min(slotWidth, slotHeight);
                         const availWidth = slotWidth - (marginMM * 2);
                         const availHeight = slotHeight - (marginMM * 2);
@@ -955,6 +1351,26 @@
                         pdf.addImage(imgSrc, 'JPEG', drawX, drawY, drawWidth, drawHeight);
                     }
                     
+                    if (pageNumbering && pageIndex >= pageNumberStart - 1) {
+                        const pageNum = pageIndex - pageNumberStart + 2;
+                        pdf.setFontSize(8);
+                        pdf.setTextColor(100, 100, 100);
+                        pdf.text(pageNum.toString(), x + slotWidth - 5, y + slotHeight - 3);
+                    }
+                    
+                    if (showStamp && pageIndex === 15 && (stampAuthor || stampDate)) {
+                        pdf.setFontSize(7);
+                        pdf.setTextColor(100, 100, 100);
+                        let yPos = y + slotHeight - 15;
+                        if (stampAuthor) {
+                            pdf.text(`made by: ${stampAuthor}`, x + 5, yPos);
+                            yPos += 4;
+                        }
+                        if (stampDate) {
+                            pdf.text(`in: ${stampDate}`, x + 5, yPos);
+                        }
+                    }
+                    
                     resolve();
                 };
                 img.onerror = () => {
@@ -965,9 +1381,33 @@
             });
         }
         
-        // Set PDF.js worker and start the app
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // Carousel initialization
+        const instructionImages = ['Frame 71.webp', 'Frame 73.webp', 'Frame 74.webp', 'Frame 75.webp', 'Frame 76.webp', 'Frame 77.webp', 'Frame 78.webp', 'Frame 79.webp', 'Frame 80.webp', 'Frame 81.webp', 'Frame 82.webp', 'Frame 83.webp', 'Frame 84.webp', 'Frame 85.webp', 'Frame 86.webp', 'Frame 87.webp'];
+        let currentImageIndex = 0;
+        
+        function updateCarousel() {
+            const carouselImg = document.getElementById('carouselImg');
+            const carouselCounter = document.getElementById('carouselCounter');
+            if (instructionImages.length > 0) {
+                carouselImg.src = `./instructions/${instructionImages[currentImageIndex]}`;
+                carouselCounter.textContent = `${currentImageIndex + 1} / ${instructionImages.length}`;
+            }
+        }
+        
+        function nextImage() {
+            currentImageIndex = (currentImageIndex + 1) % instructionImages.length;
+            updateCarousel();
+        }
+        
+        function prevImage() {
+            currentImageIndex = (currentImageIndex - 1 + instructionImages.length) % instructionImages.length;
+            updateCarousel();
+        }
+        
         init();
+        updateCarousel();
     </script>
 </body>
 </html>
